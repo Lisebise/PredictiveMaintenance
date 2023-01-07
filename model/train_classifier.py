@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.svm import LinearSVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import OneHotEncoder
+from pandas.plotting import table
 
 def load_data(database_filepath):
     """Load data into the needed arrays for the mdoel, messages and categories
@@ -40,16 +41,16 @@ def build_model(classifier):
     """Build model that can be fitted and later on predict values
     :return cv: (GridSearchCV) grid search model with which the training can be done
     """
-    classifier_dict = {"linearsvc": LinearSVC(), "randomforest": RandomForestClassifier()}
+    classifier_dict = {"LinearCSV": LinearSVC(), "RandomForest": RandomForestClassifier()}
     pipeline = Pipeline([
         ("enc", OneHotEncoder(handle_unknown = "ignore")),
         ("clf", classifier_dict[classifier])
     ])
     parameters = {
-        "linearsvc":{
+        "LinearCSV":{
             "clf__max_iter": [1000, 1500],
             "clf__loss": ["hinge", "squared_hinge"]},
-        "randomforest":{
+        "RandomForest":{
             "clf__n_estimators": [100, 200]
         }
     }
@@ -58,12 +59,13 @@ def build_model(classifier):
     return cv
 
 
-def evaluate_model(model, X_test, Y_test, category_names):
+def evaluate_model(model, X_test, Y_test, clf):
     """Evaluate the model based on the accuracy and the classification report
     :param model: (sklearn model) sklearn model that can predict
     :param X_test: (np.array) messgaes that will be categorized
     :param Y_test: (np.array) categories of the X_test
-    :param category_names: (list) list containing all categories
+    :param model: (string) string of the classifier name
+    :return accuracy: (float) accuracy of trained model
     """
     # predict on test data
     Y_pred = model.predict(X_test)
@@ -78,8 +80,8 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels = best_est.classes_)
     disp.plot()
-    plt.savefig('confusion_matrix.jpg')
-
+    plt.savefig(clf + "confusion_matrix.jpg", bbox_inches='tight')
+    return accuracy
 
 def save_model(model, model_filepath):
     """Save the model as pickle file
@@ -92,26 +94,34 @@ def save_model(model, model_filepath):
 def main():
     database_filepath = "C:/Users/Lisann/Documents/Studium/2022_2023 WS RWTH/Data Science Course/" \
                         "CapstoneProject/data/PredicitiveMaintentace"
-    model_filepath_options = ["LinearCSV", "RandomForest"]
-    model_filepath = model_filepath_options[1]
-    print('Loading data...\n    DATABASE: {}'.format(database_filepath))
-    X, Y, category_names = load_data(database_filepath)
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.4)
+    models = ["LinearCSV", "RandomForest"]
 
-    print('Building model...')
-    model = build_model("linearsvc")
+    # keep track of accuracies
+    accuracies = {}
+    for clf in models:
+        model_filepath = clf
+        print('Loading data...\n    DATABASE: {}'.format(database_filepath))
+        X, Y, category_names = load_data(database_filepath)
+        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.4)
 
-    print('Training model...')
-    model.fit(X_train, Y_train)
+        print('Building model...')
+        model = build_model(clf)
 
-    print('Evaluating model...')
-    evaluate_model(model, X_test, Y_test, category_names)
+        print('Training model...')
+        model.fit(X_train, Y_train)
 
-    print('Saving model...\n    MODEL: {}'.format(model_filepath))
-    save_model(model, model_filepath)
+        print('Evaluating model...')
+        accuracies[clf] = [evaluate_model(model, X_test, Y_test, clf)]
 
-    print('Trained model saved!')
+        print('Saving model...\n    MODEL: {}'.format(model_filepath))
+        save_model(model, model_filepath)
 
+        print('Trained model saved!')
+
+    # comparing accuracies in a table
+    
+    acc_df = pd.DataFrame.from_dict(accuracies)
+    acc_df.to_csv("accuracies.csv")
 
 if __name__ == '__main__':
     main()
