@@ -46,3 +46,8 @@ plt.savefig("pairplot_failuretype.jpg")
 plt.figure(figsize = (13, 13))
 sns.heatmap(df.corr(), annot = True, fmt = ".2f")
 plt.savefig("heatmap_features.jpg", bbox_inches='tight')
+
+plt.figure(figsize = (13, 13))
+df_powerfa = df_powerfa.drop(columns=["Power [kW]"])
+sns.heatmap(df_powerfa.corr(), annot = True, fmt = ".2f")
+plt.savefig("heatmap_powerfa_features.jpg", bbox_inches='tight')

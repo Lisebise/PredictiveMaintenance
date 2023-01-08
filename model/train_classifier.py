@@ -1,4 +1,3 @@
-from sqlalchemy import create_engine
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,7 +10,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.svm import LinearSVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import OneHotEncoder
-from pandas.plotting import table
+from sklearn.neighbors import KNeighborsClassifier
 
 def load_data(database_filepath):
     """Load data into the needed arrays for the mdoel, messages and categories
@@ -46,12 +45,15 @@ def build_model(classifier):
         ("enc", OneHotEncoder(handle_unknown = "ignore")),
         ("clf", classifier_dict[classifier])
     ])
+
     parameters = {
         "LinearCSV":{
             "clf__max_iter": [1000, 1500],
             "clf__loss": ["hinge", "squared_hinge"]},
+            "clf__class_weight": [{"No Failure": 1, "Other Failure": 2, "Power Failure": 8}],
         "RandomForest":{
-            "clf__n_estimators": [100, 200]
+            "clf__n_estimators": [100, 200],
+            "clf__class_weight": [{"No Failure": 1, "Other Failure": 2, "Power Failure": 30}],
         }
     }
 
@@ -102,7 +104,7 @@ def main():
         model_filepath = clf
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
         X, Y, category_names = load_data(database_filepath)
-        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.4)
+        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
 
         print('Building model...')
         model = build_model(clf)
@@ -119,7 +121,6 @@ def main():
         print('Trained model saved!')
 
     # comparing accuracies in a table
-    
     acc_df = pd.DataFrame.from_dict(accuracies)
     acc_df.to_csv("accuracies.csv")
 
